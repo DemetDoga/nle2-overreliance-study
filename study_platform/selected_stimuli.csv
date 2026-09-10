@@ -1,0 +1,31 @@
+task,text,true_label,shown_label,correct_trial
+sentiment,"reign of fire looks as if it was made without much thought -- and is best watched that way.",positive,negative,False
+sentiment,"a great ensemble cast can't lift this heartfelt enterprise out of the familiar.",negative,positive,False
+sentiment,"the overall effect is less like a children's movie than a recruitment film for future hollywood sellouts.",negative,positive,False
+sentiment,"though it's become almost redundant to say so, major kudos go to leigh for actually casting people who look working-class.",positive,negative,False
+sentiment,"the man from elysian fields is a cold, bliss-less work that groans along thinking itself some important comment on how life throws us some beguiling curves.",negative,positive,False
+sentiment,"the best that can be said about the work here of scottish director ritchie... is that he obviously doesn't have his heart in it.",negative,negative,True
+sentiment,"as the latest bid in the tv-to-movie franchise game, i spy makes its big-screen entry with little of the nervy originality of its groundbreaking small-screen progenitor.",negative,negative,True
+sentiment,"writer/director joe carnahan's grimy crime drama is a manual of precinct cliches, but it moves fast enough to cover its clunky dialogue and lapses in logic.",positive,positive,True
+sentiment,"though perry and hurley make inspiring efforts to breathe life into the disjointed, haphazard script, neither the actors nor director can make it more than fitfully entertaining.",negative,negative,True
+sentiment,"pumpkin means to be an outrageous dark satire on fraternity life, but its ambitions far exceed the abilities of its writer and co-director in their feature debut.",negative,negative,True
+irony,"Well done. You have more Twitter followers than me. You have succeeded in life",ironic,not_ironic,False
+irony,"Everybody is out there traveling the world and I'm sitting here studying maps for my last exam #jealousy #almostdone",ironic,not_ironic,False
+irony,"If loose lips sink ships, then loose tweets sink fleets.",ironic,not_ironic,False
+irony,"And my christmas shopping is done.",not_ironic,ironic,False
+irony,"Cannot wait to go to the dentist later!",ironic,not_ironic,False
+irony,"So that went well",ironic,ironic,True
+irony,"OMG YES. 7:30 FINALS ON A FRIDAY ARE MY FAVORITE.",ironic,ironic,True
+irony,"I fell asleep posting my last post.",ironic,ironic,True
+irony,"Ahhh Finals week.... I'll throw a kegger at my house for all the survivors #Motivating #RIP",ironic,ironic,True
+irony,"Look really awake and like I've made an effort today",ironic,ironic,True
+sarcasm,"I've been laid off !! Nice:))",sarcastic,not_sarcastic,False
+sarcasm,"ugh I have to send an email??? how about I just quit!!!!!",sarcastic,not_sarcastic,False
+sarcasm,"wow i love only ever buying gray and striped shirts",sarcastic,not_sarcastic,False
+sarcasm,"omg there's a sheet of ice in front of my school. should I slip and fall?",sarcastic,not_sarcastic,False
+sarcasm,"It would be sick to retire and have my own green bean farm.",not_sarcastic,sarcastic,False
+sarcasm,"'It's only a game' 🥴🥴",sarcastic,sarcastic,True
+sarcasm,"I love online shopping because if I am physically in a store and an employee even looks at me I will immediately leave.",sarcastic,sarcastic,True
+sarcasm,"apparently it's national siblings day? idgaf 💀",sarcastic,sarcastic,True
+sarcasm,"imagine being able to sleep haha can't relate",sarcastic,sarcastic,True
+sarcasm,"Listening to the rain when you're tucked up in bed is one of life's simplest pleasures ☔️",not_sarcastic,not_sarcastic,True

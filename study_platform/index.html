@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Subjectivity and Explanation-Induced Over-Reliance Study</title>
+
+  <!-- jsPsych core and plugins (via CDN) -->
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
+  <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" />
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-likert@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.0.3"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --paper: #faf9f6;
+      --ink: #1c2430;
+      --ink-soft: #6b7280;
+      --rule: #dedad1;
+      --human: #0e6b5c;
+      --human-soft: #e6f0ee;
+      --ai: #9c5a1e;
+      --ai-soft: #f7efe4;
+      --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      font-family: var(--sans);
+      background-color: var(--paper);
+      color: var(--ink);
+      margin: 0;
+      padding: 0;
+    }
+
+    #jspsych-content-wrapper {
+      display: flex;
+      justify-content: center;
+    }
+
+    #jspsych-content {
+      max-width: 620px;
+      width: 100%;
+      margin: 56px auto 80px auto;
+      padding: 48px 44px;
+      background: #ffffff;
+      border-radius: 4px;
+      border-top: 3px solid var(--human);
+      box-shadow: 0 1px 3px rgba(28, 36, 48, 0.08), 0 8px 24px rgba(28, 36, 48, 0.06);
+    }
+
+    /* -- Task label: a small, quiet orientation cue naming the current
+       subjectivity block (Sentiment / Irony / Sarcasm). This is real
+       information (which task the participant is in), not decoration. -- */
+    .task-label {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--human);
+      margin-bottom: 18px;
+      letter-spacing: 0.02em;
+    }
+
+    .stimulus-text {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 24px;
+      line-height: 1.55;
+      color: var(--ink);
+      margin: 0 0 32px 0;
+      padding-left: 20px;
+      border-left: 2px solid var(--rule);
+    }
+
+    .prompt-text {
+      font-family: var(--sans);
+      font-size: 16px;
+      color: var(--ink-soft);
+      margin-bottom: 20px;
+    }
+
+    /* -- AI voice: consistently sans-serif + amber, distinguishing the
+       system's contribution from the participant's own (serif) reading
+       material throughout the whole experiment. -- */
+    .ai-thinking {
+      font-family: var(--sans);
+      font-size: 15px;
+      color: var(--ink-soft);
+      margin: 28px 0 8px 0;
+    }
+
+    .ai-thinking-dots span {
+      animation: blink 1.4s infinite;
+      opacity: 0;
+    }
+    .ai-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .ai-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink {
+      0% { opacity: 0; }
+      50% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .ai-prediction {
+      font-family: var(--sans);
+      margin: 28px 0 4px 0;
+      padding: 4px 0 4px 16px;
+      border-left: 2px solid var(--ai);
+    }
+
+    .ai-prediction-label {
+      display: block;
+      font-size: 13px;
+      color: var(--ai);
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .ai-prediction-value {
+      display: block;
+      font-size: 22px;
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .ai-confidence-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .ai-confidence-bar-track {
+      flex: 1;
+      max-width: 160px;
+      height: 6px;
+      background-color: var(--ai-soft);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .ai-confidence-bar-fill {
+      height: 100%;
+      background-color: var(--ai);
+      border-radius: 3px;
+    }
+
+    .ai-confidence-text {
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+
+    .ai-explanation {
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--ink-soft);
+      margin: 16px 0 8px 16px;
+      max-width: 480px;
+    }
+
+    .instructions, .block-intro {
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .instructions h2, .block-intro h2 {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 26px;
+      margin-top: 0;
+    }
+
+    /* -- Buttons -- */
+    .jspsych-btn {
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 500;
+      padding: 11px 24px;
+      margin: 24px 8px 0 0;
+      border-radius: 3px;
+      border: 1.5px solid var(--human);
+      background-color: #ffffff;
+      color: var(--human);
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .jspsych-btn:hover:not(:disabled) {
+      background-color: var(--human);
+      color: #ffffff;
+    }
+
+    .jspsych-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    /* -- Progress bar: thin, quiet, sits above the card -- */
+    #jspsych-progressbar-container {
+      max-width: 620px;
+      margin: 0 auto;
+      color: var(--ink-soft);
+      font-family: var(--sans);
+      font-size: 13px;
+      padding-top: 24px;
+    }
+
+    #jspsych-progressbar-outer {
+      background-color: var(--rule);
+      border-radius: 3px;
+      height: 5px;
+      border: none;
+    }
+
+    #jspsych-progressbar-inner {
+      background-color: var(--human);
+      border-radius: 3px;
+      height: 5px;
+    }
+
+    /* -- Likert / form questions -- */
+    .jspsych-survey-likert-question, .jspsych-survey-html-form-question {
+      font-family: var(--sans);
+      font-size: 16px;
+      margin-bottom: 26px;
+      text-align: left;
+      color: var(--ink);
+    }
+  </style>
+</head>
+<body>
+
+  <!--
+    Load order matters:
+    1. simple_csv_parser.js  -- not needed in-browser (only used by
+       build_data_file.js, which runs in Node ahead of time), but kept
+       alongside for reference / re-generation if stimuli change.
+    2. counterbalancing.js   -- attaches window.Counterbalancing
+    3. trial_builder.js      -- attaches window.TrialBuilder (depends on #2)
+    4. build_timeline_spec.js -- attaches window.TimelineSpec
+    5. stimuli_data.js       -- attaches window.STIMULI_ROWS / window.NLE_ROWS
+                                (GENERATE THIS FILE YOURSELF -- see README)
+    6. experiment.js         -- runs the actual study
+  -->
+  <script src="counterbalancing.js"></script>
+  <script src="trial_builder.js"></script>
+  <script src="build_timeline_spec.js"></script>
+  <script src="stimuli_data.js"></script>
+  <script src="experiment.js"></script>
+
+</body>
+</html>

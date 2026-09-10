@@ -1,0 +1,31 @@
+task,text,true_label,shown_label,correct_trial,confidence
+sentiment,reign of fire looks as if it was made without much thought -- and is best watched that way.,positive,negative,False,0.5072867274284363
+sentiment,a great ensemble cast can't lift this heartfelt enterprise out of the familiar.,negative,positive,False,0.5135169625282288
+sentiment,the overall effect is less like a children's movie than a recruitment film for future hollywood sellouts.,negative,positive,False,0.6111854910850525
+sentiment,"though it's become almost redundant to say so, major kudos go to leigh for actually casting people who look working-class.",positive,negative,False,0.5912827253341675
+sentiment,"the man from elysian fields is a cold, bliss-less work that groans along thinking itself some important comment on how life throws us some beguiling curves.",negative,positive,False,0.5199751853942871
+sentiment,the best that can be said about the work here of scottish director ritchie ... is that he obviously does n't have his heart in it .,negative,negative,True,0.5131505727767944
+sentiment,"as the latest bid in the tv-to-movie franchise game, i spy makes its big-screen entry with little of the nervy originality of its groundbreaking small-screen progenitor.",negative,negative,True,0.5977101922035217
+sentiment,"writer/director joe carnahan's grimy crime drama is a manual of precinct cliches, but it moves fast enough to cover its clunky dialogue and lapses in logic.",positive,positive,True,0.6341704726219177
+sentiment,"though perry and hurley make inspiring efforts to breathe life into the disjointed , haphazard script by jay scherick and david ronn , neither the actors nor director reginald hudlin can make it more than fitfully entertaining .",negative,negative,True,0.5572013854980469
+sentiment,"pumpkin means to be an outrageous dark satire on fraternity life , but its ambitions far exceed the abilities of writer adam larson broder and his co-director , tony r. abrams , in their feature debut .",negative,negative,True,0.5017759799957275
+irony,Well done. You have more Twitter followers than me. You have succeeded in life,ironic,not_ironic,False,0.43539121747016907
+irony,Everybody is out there traveling the world and I'm sitting here studying maps for my last exam #jealousy #almostdone,ironic,not_ironic,False,0.5482840538024902
+irony,"If loose lips sink ships, then loose tweets sink fleets.",ironic,not_ironic,False,0.6205477714538574
+irony,And my christmas shopping is done.,not_ironic,ironic,False,0.5801572799682617
+irony,Cannot wait to go to the dentist later!,ironic,not_ironic,False,0.5324307084083557
+irony,So that went well,ironic,ironic,True,0.5165387988090515
+irony,OMG YES. 7:30 FINALS ON A FRIDAY ARE MY FAVORITE.,ironic,ironic,True,0.6842055320739746
+irony,I fell asleep posting my last post.,ironic,ironic,True,0.5351158976554871
+irony,Ahhh Finals week.... I'll throw a kegger at my house for all the survivors #Motivating #RIP,ironic,ironic,True,0.6926385164260864
+irony,Look really awake and like I've made an effort today,ironic,ironic,True,0.5046182870864868
+sarcasm,I've been laid off !! Nice:)),sarcastic,not_sarcastic,False,0.584665060043335
+sarcasm,ugh I have to send an email??? how about I just quit!!!!!,sarcastic,not_sarcastic,False,0.5480793714523315
+sarcasm,wow i love only ever buying gray and striped shirts,sarcastic,not_sarcastic,False,0.5184029340744019
+sarcasm,omg there's a sheet of ice in front of my school. should I slip and fall?,sarcastic,not_sarcastic,False,0.5666095018386841
+sarcasm,It would be sick to retire and have my own green bean farm.,not_sarcastic,sarcastic,False,0.5907965302467346
+sarcasm,'It's only a game' 🥴🥴,sarcastic,sarcastic,True,0.4913487732410431
+sarcasm,I love online shopping because if I am physically in a store and an employee even looks at me I will immediately leave.,sarcastic,sarcastic,True,0.5914893746376038
+sarcasm,apparently it's national siblings day? idgaf 💀,sarcastic,sarcastic,True,0.5061591863632202
+sarcasm,imagine being able to sleep haha can't relate,sarcastic,sarcastic,True,0.5027303099632263
+sarcasm,Listening to the rain when you're tucked up in bed is one of life's simplest pleasures ☔️,not_sarcastic,not_sarcastic,True,0.5960285663604736
