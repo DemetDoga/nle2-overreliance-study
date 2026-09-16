@@ -2,9 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Task Subjectivity and Explanation-Induced Over-Reliance Study</title>
 
-  <!-- jsPsych core and plugins (via CDN) -->
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet" />
+
+  <!-- jsPsych core & plugins -->
   <script src="https://unpkg.com/jspsych@7.3.4"></script>
   <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" />
   <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
@@ -12,247 +18,297 @@
   <script src="https://unpkg.com/@jspsych/plugin-survey-likert@2.0.0"></script>
   <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.0.3"></script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-
   <style>
-    * { box-sizing: border-box; }
-
     :root {
-      --paper: #faf9f6;
-      --ink: #1c2430;
-      --ink-soft: #6b7280;
-      --rule: #dedad1;
-      --human: #0e6b5c;
-      --human-soft: #e6f0ee;
-      --ai: #9c5a1e;
-      --ai-soft: #f7efe4;
-      --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
-      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --paper: #f8fafc;
+      --surface: #ffffff;
+      --surface-alt: #f1f5f9;
+      --ink: #0f172a;
+      --ink-soft: #475569;
+      --ink-muted: #94a3b8;
+      --border-subtle: #e2e8f0;
+
+      --human: #0d9488;
+      --human-dark: #0f766e;
+      --human-soft: #ccfbf1;
+
+      --ai-accent: #d97706;
+      --ai-accent-dark: #b45309;
+      --ai-bg: #fffbeb;
+      --ai-border: #fef3c7;
+
+      --font-serif: "Source Serif 4", Georgia, serif;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: "JetBrains Mono", monospace;
+
+      --max-width: 660px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+      --transition-smooth: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
-      font-family: var(--sans);
+      font-family: var(--font-sans);
       background-color: var(--paper);
       color: var(--ink);
       margin: 0;
       padding: 0;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
 
     #jspsych-content-wrapper {
       display: flex;
       justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: clamp(16px, 4vw, 40px) 16px;
     }
 
     #jspsych-content {
-      max-width: 620px;
+      max-width: var(--max-width);
       width: 100%;
-      margin: 56px auto 80px auto;
-      padding: 48px 44px;
-      background: #ffffff;
-      border-radius: 4px;
-      border-top: 3px solid var(--human);
-      box-shadow: 0 1px 3px rgba(28, 36, 48, 0.08), 0 8px 24px rgba(28, 36, 48, 0.06);
+      margin: clamp(20px, 4vh, 48px) auto;
+      padding: clamp(24px, 5vw, 40px);
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-card);
     }
 
-    /* -- Task label: a small, quiet orientation cue naming the current
-       subjectivity block (Sentiment / Irony / Sarcasm). This is real
-       information (which task the participant is in), not decoration. -- */
-    .task-label {
-      font-family: var(--sans);
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--human);
-      margin-bottom: 18px;
-      letter-spacing: 0.02em;
-    }
-
-    .stimulus-text {
-      font-family: var(--serif);
-      font-style: italic;
-      font-size: 24px;
-      line-height: 1.55;
-      color: var(--ink);
-      margin: 0 0 32px 0;
-      padding-left: 20px;
-      border-left: 2px solid var(--rule);
-    }
-
-    .prompt-text {
-      font-family: var(--sans);
-      font-size: 16px;
-      color: var(--ink-soft);
-      margin-bottom: 20px;
-    }
-
-    /* -- AI voice: consistently sans-serif + amber, distinguishing the
-       system's contribution from the participant's own (serif) reading
-       material throughout the whole experiment. -- */
-    .ai-thinking {
-      font-family: var(--sans);
-      font-size: 15px;
-      color: var(--ink-soft);
-      margin: 28px 0 8px 0;
-    }
-
-    .ai-thinking-dots span {
-      animation: blink 1.4s infinite;
-      opacity: 0;
-    }
-    .ai-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .ai-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes blink {
-      0% { opacity: 0; }
-      50% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-
-    .ai-prediction {
-      font-family: var(--sans);
-      margin: 28px 0 4px 0;
-      padding: 4px 0 4px 16px;
-      border-left: 2px solid var(--ai);
-    }
-
-    .ai-prediction-label {
-      display: block;
-      font-size: 13px;
-      color: var(--ai);
-      font-weight: 500;
-      margin-bottom: 4px;
-    }
-
-    .ai-prediction-value {
-      display: block;
-      font-size: 22px;
-      color: var(--ink);
-      font-weight: 500;
-    }
-
-    .ai-confidence-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .ai-confidence-bar-track {
-      flex: 1;
-      max-width: 160px;
-      height: 6px;
-      background-color: var(--ai-soft);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .ai-confidence-bar-fill {
-      height: 100%;
-      background-color: var(--ai);
-      border-radius: 3px;
-    }
-
-    .ai-confidence-text {
-      font-size: 13px;
-      color: var(--ink-soft);
-    }
-
-    .ai-explanation {
-      font-family: var(--sans);
-      font-size: 15px;
-      line-height: 1.6;
-      color: var(--ink-soft);
-      margin: 16px 0 8px 16px;
-      max-width: 480px;
-    }
-
-    .instructions, .block-intro {
-      font-family: var(--sans);
-      font-size: 16px;
-      line-height: 1.65;
-      color: var(--ink);
-      text-align: left;
-    }
-
-    .instructions h2, .block-intro h2 {
-      font-family: var(--serif);
-      font-weight: 500;
-      font-size: 26px;
-      margin-top: 0;
-    }
-
-    /* -- Buttons -- */
-    .jspsych-btn {
-      font-family: var(--sans);
-      font-size: 15px;
-      font-weight: 500;
-      padding: 11px 24px;
-      margin: 24px 8px 0 0;
-      border-radius: 3px;
-      border: 1.5px solid var(--human);
-      background-color: #ffffff;
-      color: var(--human);
-      cursor: pointer;
-      transition: background-color 0.15s ease, color 0.15s ease;
-    }
-
-    .jspsych-btn:hover:not(:disabled) {
-      background-color: var(--human);
-      color: #ffffff;
-    }
-
-    .jspsych-btn:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
-
-    /* -- Progress bar: thin, quiet, sits above the card -- */
     #jspsych-progressbar-container {
-      max-width: 620px;
+      max-width: var(--max-width);
       margin: 0 auto;
       color: var(--ink-soft);
-      font-family: var(--sans);
-      font-size: 13px;
-      padding-top: 24px;
+      font-size: 0.8125rem;
+      padding-top: 20px;
     }
 
     #jspsych-progressbar-outer {
-      background-color: var(--rule);
-      border-radius: 3px;
-      height: 5px;
+      background-color: var(--border-subtle);
+      border-radius: 999px;
+      height: 6px;
       border: none;
+      overflow: hidden;
     }
 
     #jspsych-progressbar-inner {
       background-color: var(--human);
-      border-radius: 3px;
-      height: 5px;
+      border-radius: 999px;
+      height: 100%;
+      transition: width 0.4s var(--transition-smooth);
     }
 
-    /* -- Likert / form questions -- */
-    .jspsych-survey-likert-question, .jspsych-survey-html-form-question {
-      font-family: var(--sans);
-      font-size: 16px;
-      margin-bottom: 26px;
-      text-align: left;
-      color: var(--ink);
+    .task-badge-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
     }
+
+    .task-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--human-dark);
+      background-color: var(--human-soft);
+      padding: 5px 14px;
+      border-radius: 999px;
+    }
+
+    .stimulus-card {
+      position: relative;
+      background: #f8fafc;
+      border-radius: var(--radius-md);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-subtle);
+      border-left: 5px solid var(--human);
+      text-align: center;
+    }
+
+    .stimulus-text {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(1.2rem, 2.2vw, 1.45rem);
+      line-height: 1.6;
+      color: var(--ink);
+      margin: 0;
+    }
+
+    .prompt-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+      margin: 20px 0 16px 0;
+      text-align: center;
+    }
+
+    /* Chat Conversation Layout */
+    .chat-thread {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin: 16px 0 24px 0;
+      text-align: left;
+    }
+
+    .chat-message {
+      display: flex;
+      width: 100%;
+    }
+
+    .chat-message--user { justify-content: flex-end; }
+    .chat-message--ai { justify-content: flex-start; }
+
+    .chat-bubble {
+      max-width: 85%;
+      padding: 14px 18px;
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      border-radius: var(--radius-md);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .chat-bubble--user {
+      background-color: var(--human);
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-bubble--user .chat-quote {
+      display: block;
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding-bottom: 6px;
+    }
+
+    .chat-bubble--ai {
+      background-color: var(--surface-alt);
+      color: var(--ink);
+      border: 1px solid var(--border-subtle);
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-bubble--ai .chat-label {
+      display: inline-block;
+      font-size: 0.725rem;
+      font-weight: 700;
+      color: var(--ai-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .chat-confidence {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.725rem;
+      font-weight: 600;
+      background: var(--ai-bg);
+      color: var(--ai-accent-dark);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+      border: 1px solid var(--ai-border);
+    }
+
+    /* Typing Dots Animation */
+    .typing-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 4px;
+    }
+
+    .typing-dots span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: var(--ink-soft);
+      animation: typing-bounce 1.2s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes typing-bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    .typing-cursor::after {
+      content: "|";
+      animation: blink 0.8s step-end infinite;
+      color: var(--ai-accent);
+      margin-left: 2px;
+      font-weight: 700;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* Integrated Quick Reply Buttons */
+    .jspsych-html-button-response-btngroup {
+      display: flex !important;
+      justify-content: flex-end !important;
+      gap: 8px !important;
+      margin-top: 12px !important;
+      flex-wrap: wrap !important;
+    }
+
+    .jspsych-btn {
+      font-family: var(--font-sans);
+      font-size: 0.875rem !important;
+      font-weight: 600 !important;
+      padding: 9px 18px !important;
+      margin: 0 !important;
+      border-radius: 999px !important;
+      border: 1.5px solid var(--human) !important;
+      background-color: var(--surface) !important;
+      color: var(--human-dark) !important;
+      cursor: pointer;
+      transition: all 0.2s var(--transition-smooth);
+      box-shadow: 0 2px 5px rgba(13, 148, 136, 0.1) !important;
+    }
+
+    .jspsych-btn:hover:not(:disabled) {
+      background-color: var(--human) !important;
+      color: #ffffff !important;
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25) !important;
+    }
+
+    .hidden-next-btn {
+      position: absolute !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: none !important;
+    }
+
+    .form-field { text-align: left; margin-bottom: 20px; }
+    .form-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--ink-soft); margin-bottom: 8px; }
+    .form-input, .form-select { width: 100%; font-family: var(--font-sans); font-size: 0.95rem; padding: 10px 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background-color: var(--surface); color: var(--ink); }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--human); }
   </style>
 </head>
 <body>
 
-  <!--
-    Load order matters:
-    1. simple_csv_parser.js  -- not needed in-browser (only used by
-       build_data_file.js, which runs in Node ahead of time), but kept
-       alongside for reference / re-generation if stimuli change.
-    2. counterbalancing.js   -- attaches window.Counterbalancing
-    3. trial_builder.js      -- attaches window.TrialBuilder (depends on #2)
-    4. build_timeline_spec.js -- attaches window.TimelineSpec
-    5. stimuli_data.js       -- attaches window.STIMULI_ROWS / window.NLE_ROWS
-                                (GENERATE THIS FILE YOURSELF -- see README)
-    6. experiment.js         -- runs the actual study
-  -->
   <script src="counterbalancing.js"></script>
   <script src="trial_builder.js"></script>
   <script src="build_timeline_spec.js"></script>

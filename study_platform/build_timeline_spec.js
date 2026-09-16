@@ -1,30 +1,5 @@
 /**
- * build_timeline_spec.js
- *
- * Builds a plain-data "timeline specification" -- an ordered array of
- * screen descriptions -- from the 90-trial sequence produced by
- * trial_builder.js. This file has NO dependency on jsPsych itself, so
- * its logic (ordering, screen counts, content assembly) can be fully
- * unit-tested in Node before ever touching a browser.
- *
- * experiment.js (browser-only) consumes this spec and translates each
- * entry into an actual jsPsych plugin trial.
- *
- * Screen types produced:
- *   "instructions"      - one-time intro screen
- *   "block_intro"        - shown once at the start of each of the 3
- *                          explanation-condition blocks
- *   "judgment1"           - participant's Initial Judgment for one item
- *   "reveal"              - shows the AI's prediction (+ explanation,
- *                          if the condition has one)
- *   "judgment2"           - participant's Final Decision for the same item
- *   "attention_check"     - one instructed-response check, inserted
- *                          between block 1 and block 2
- *   "likert_block"        - Perceived Trust / Mental Demand / Perceived
- *                          Utility questions, shown once after each of
- *                          the 3 explanation blocks (so ratings reflect
- *                          the condition just experienced)
- *   "demographics"        - age + education, shown once at the very end
+ * build_timeline_spec.js - Revised Design (30-Trial Spec)
  */
 (function (root, factory) {
   const mod = factory();
@@ -53,13 +28,9 @@ function labelOptionsForTask(task) {
   return Object.keys(labels).map((key) => ({ value: key, display: labels[key] }));
 }
 
-/**
- * Builds the ordered timeline spec for one participant, given their
- * already-ordered 90-trial sequence (from trial_builder.js).
- */
 function buildTimelineSpec(trials) {
-  if (trials.length !== 90) {
-    throw new Error(`Expected exactly 90 trials, got ${trials.length}.`);
+  if (trials.length !== 30) {
+    throw new Error(`Expected exactly 30 trials for revised design, got ${trials.length}.`);
   }
 
   const spec = [];
@@ -72,15 +43,29 @@ function buildTimelineSpec(trials) {
       "and then give your final judgment. Please read each sentence carefully.",
   });
 
-  // Split the 90 trials into their 3 explanation-condition blocks of 30.
-  const blocks = [trials.slice(0, 30), trials.slice(30, 60), trials.slice(60, 90)];
+  spec.push({
+    type: "demographics",
+    items: [
+      { id: "age", label: "What is your age?", input_type: "number" },
+      {
+        id: "education",
+        label: "What is your highest completed level of education?",
+        input_type: "select",
+        options: [
+          "High school",
+          "Bachelor's degree",
+          "Master's degree",
+          "Doctorate",
+          "Other",
+        ],
+      },
+    ],
+  });
+
+  const blocks = [trials.slice(0, 10), trials.slice(10, 20), trials.slice(20, 30)];
 
   blocks.forEach((block, blockIndex) => {
     const explanationCondition = block[0].explanation_condition;
-    const allSameCondition = block.every((t) => t.explanation_condition === explanationCondition);
-    if (!allSameCondition) {
-      throw new Error(`Block ${blockIndex} does not have a single, consistent explanation condition.`);
-    }
 
     spec.push({
       type: "block_intro",
@@ -109,9 +94,9 @@ function buildTimelineSpec(trials) {
         text: trial.text,
         shown_label: trial.shown_label,
         shown_label_display: TASK_LABELS[trial.subjectivity][trial.shown_label],
-        confidence: trial.confidence, // genuine model softmax probability, not invented
-        explanation_text: trial.explanation_text, // null for control
-        true_label: trial.true_label, // kept for data logging, not shown to participant
+        confidence: trial.confidence,
+        explanation_text: trial.explanation_text,
+        true_label: trial.true_label,
         correct_trial: trial.correct_trial,
       });
 
@@ -124,14 +109,13 @@ function buildTimelineSpec(trials) {
         options,
         true_label: trial.true_label,
         shown_label: trial.shown_label,
+        shown_label_display: TASK_LABELS[trial.subjectivity][trial.shown_label],
+        confidence: trial.confidence,
+        explanation_text: trial.explanation_text,
         correct_trial: trial.correct_trial,
       });
     });
 
-    // Attention check: inserted once, right after the first block ends
-    // (i.e., after 30 real trials = 90 screens so far), per the
-    // pre-registered design ("a comprehension question inserted among
-    // the stimuli").
     if (blockIndex === 0) {
       spec.push({
         type: "attention_check",
@@ -153,16 +137,32 @@ function buildTimelineSpec(trials) {
       explanation_condition: explanationCondition,
       items: [
         {
-          id: "trust",
-          text: `I trust this AI system's predictions for this type of task.`,
+          id: "trust_confident",
+          text: "I am confident in this AI system.",
+        },
+        {
+          id: "trust_reliable",
+          text: "This AI system is reliable.",
+        },
+        {
+          id: "trust_can_trust",
+          text: "I can trust this AI system.",
         },
         {
           id: "mental_demand",
           text: "I found this task mentally demanding.",
         },
         {
-          id: "utility",
-          text: "The information shown (prediction and/or explanation) was useful for making my decision.",
+          id: "utility_understand",
+          text: "From this AI system's prediction/explanation, I understand how it works.",
+        },
+        {
+          id: "utility_how_to_use",
+          text: "This information tells me how to use it in making my decision.",
+        },
+        {
+          id: "utility_useful",
+          text: "This information is useful to my goals.",
         },
       ],
       scale: [1, 2, 3, 4, 5],
@@ -170,23 +170,37 @@ function buildTimelineSpec(trials) {
     });
   });
 
+  // Self-confidence in one's own interpretive ability -- asked once, at
+  // the end (after participants have actually done the task), so the
+  // question is grounded in their real experience rather than an
+  // abstract, context-free self-assessment before starting. Used to
+  // explore whether high self-confidence relates to lower over-reliance
+  // (Lee & Moray, 1992; Dietvorst et al., 2015).
   spec.push({
-    type: "demographics",
+    type: "self_confidence",
     items: [
-      { id: "age", label: "What is your age?", input_type: "number" },
       {
-        id: "education",
-        label: "What is your highest completed level of education?",
-        input_type: "select",
-        options: [
-          "High school",
-          "Bachelor's degree",
-          "Master's degree",
-          "Doctorate",
-          "Other",
-        ],
+        id: "confidence_sentiment",
+        text: "I am confident in my own ability to correctly judge the sentiment (positive/negative) of a piece of text.",
+      },
+      {
+        id: "confidence_irony",
+        text: "I am confident in my own ability to correctly detect irony in a piece of text.",
+      },
+      {
+        id: "confidence_sarcasm",
+        text: "I am confident in my own ability to correctly detect sarcasm in a piece of text.",
       },
     ],
+    scale: [1, 2, 3, 4, 5],
+    scale_labels: ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+  });
+
+  spec.push({
+    type: "closing",
+    text:
+      "Thank you for participating in this study. Your responses have been recorded. " +
+      "We appreciate the time and attention you gave to each question.",
   });
 
   return spec;

@@ -1,26 +1,8 @@
 /**
- * experiment.js
- *
- * Browser-only file: translates the pure-data timeline spec (from
- * build_timeline_spec.js) into actual jsPsych plugin trials, and runs
- * the experiment. This file is intentionally kept thin/mechanical --
- * all the ordering and content-assembly logic it depends on was
- * already unit-tested in Node (see trial_builder.js and
- * build_timeline_spec.js).
- *
- * Requires (loaded via <script> tags in index.html, in this order):
- *   - jsPsych core + plugins (CDN)
- *   - simple_csv_parser.js
- *   - counterbalancing.js
- *   - trial_builder.js
- *   - build_timeline_spec.js
- *   - STIMULI_DATA and NLE_DATA (embedded data, see stimuli_data.js)
+ * experiment.js - Automatic Data Saving Version with Fixed Self-Confidence Export
  */
 
 function generateParticipantId() {
-  // Simple unique ID: timestamp + random suffix. Used only for
-  // deterministic counterbalancing assignment (see counterbalancing.js)
-  // and for labeling the exported data file.
   return "p_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
 }
 
@@ -28,23 +10,31 @@ function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-/**
- * Converts a raw model confidence score into a verbal category rather
- * than displaying the raw percentage directly. This preserves genuine,
- * model-derived information (the underlying score still drives the bar
- * width) while avoiding a very low-looking number (e.g., "51%") from
- * unintentionally signaling "the AI itself is unsure" in a way that
- * could suppress the over-reliance effect the study aims to measure.
- * Thresholds are based on the observed confidence range across the 30
- * stimuli (roughly 0.40-0.70).
- */
+const DISPLAY_LABELS = {
+  positive: "Positive",
+  negative: "Negative",
+  ironic: "Ironic",
+  not_ironic: "Not Ironic",
+  sarcastic: "Sarcastic",
+  not_sarcastic: "Not Sarcastic",
+};
+
 function getConfidenceLabel(confidence) {
-  if (confidence >= 0.7) return "Highly confident";
-  if (confidence >= 0.55) return "Fairly confident";
-  return "Moderate confidence";
+  if (confidence >= 0.60) return "HIGH CONFIDENCE";
+  if (confidence >= 0.50) return "MEDIUM CONFIDENCE";
+  return "MODERATE CONFIDENCE";
 }
 
-function screenToJsPsychTrial(screen, jsPsych) {
+let dataSaved = false;
+
+function saveExperimentData(jsPsych, participantId) {
+  if (!dataSaved) {
+    dataSaved = true;
+    jsPsych.data.get().localSave("csv", `data_${participantId}.csv`);
+  }
+}
+
+function screenToJsPsychTrial(screen, jsPsych, participantId) {
   switch (screen.type) {
     case "instructions":
       return {
@@ -69,9 +59,15 @@ function screenToJsPsychTrial(screen, jsPsych) {
     case "judgment1":
       return {
         type: jsPsychHtmlButtonResponse,
-        stimulus: `<div class="task-label">${capitalize(screen.subjectivity)}</div>
-                   <div class="stimulus-text">"${screen.text}"</div>
-                   <p class="prompt-text">What is your judgment?</p>`,
+        stimulus: `
+          <div class="task-badge-wrapper">
+            <span class="task-label">${capitalize(screen.subjectivity)} Task</span>
+          </div>
+          <div class="stimulus-card">
+            <p class="stimulus-text">"${screen.text}"</p>
+          </div>
+          <p class="prompt-text">What is your initial judgment?</p>
+        `,
         choices: screen.options.map((o) => o.display),
         data: {
           screen_type: "judgment1",
@@ -86,30 +82,58 @@ function screenToJsPsychTrial(screen, jsPsych) {
       };
 
     case "reveal": {
-      const explanationHtml = screen.explanation_text
-        ? `<div class="ai-explanation" id="ai-explanation-text" style="visibility: hidden;">${screen.explanation_text}</div>`
-        : "";
-      const confidencePercent = Math.round(screen.confidence * 100);
       const confidenceLabel = getConfidenceLabel(screen.confidence);
+      const explanationText = screen.explanation_text || "";
+
       return {
         type: jsPsychHtmlButtonResponse,
-        stimulus: `<div class="task-label">${capitalize(screen.subjectivity)}</div>
-                   <div class="stimulus-text">"${screen.text}"</div>
-                   <div id="ai-thinking" class="ai-thinking">
-                     <span class="ai-thinking-dots">AI is analyzing<span>.</span><span>.</span><span>.</span></span>
-                   </div>
-                   <div id="ai-prediction-box" class="ai-prediction" style="visibility: hidden;">
-                     <span class="ai-prediction-label">AI prediction</span>
-                     <span class="ai-prediction-value">${screen.shown_label_display}</span>
-                     <div class="ai-confidence-row">
-                       <div class="ai-confidence-bar-track">
-                         <div class="ai-confidence-bar-fill" style="width: ${confidencePercent}%;"></div>
-                       </div>
-                       <span class="ai-confidence-text">${confidenceLabel}</span>
-                     </div>
-                   </div>
-                   ${explanationHtml}`,
+        stimulus: function () {
+          const priorResponses = jsPsych.data
+            .get()
+            .filter({ screen_type: "judgment1", trial_number: screen.trial_number })
+            .values();
+          const initialJudgmentRaw =
+            priorResponses.length > 0 ? priorResponses[priorResponses.length - 1].initial_judgment : null;
+          const initialJudgmentDisplay = DISPLAY_LABELS[initialJudgmentRaw] || initialJudgmentRaw || "";
+
+          const explanationBlock = explanationText
+            ? `<div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(0,0,0,0.06);"><span class="typing-cursor" id="ai-explanation-text"></span></div>`
+            : "";
+
+          return `
+            <div class="task-badge-wrapper">
+              <span class="task-label">${capitalize(screen.subjectivity)} Task</span>
+            </div>
+            <div class="chat-thread">
+              <div class="chat-message chat-message--user">
+                <div class="chat-bubble chat-bubble--user">
+                  <span class="chat-quote">"${screen.text}"</span>
+                  My judgment: <strong>${initialJudgmentDisplay}</strong>
+                </div>
+              </div>
+              <div class="chat-message chat-message--ai" id="ai-thinking">
+                <div class="chat-bubble chat-bubble--ai">
+                  <span class="chat-label">AI System</span><br>
+                  <div class="typing-dots"><span></span><span></span><span></span></div>
+                </div>
+              </div>
+              <div class="chat-message chat-message--ai" id="ai-prediction-box" style="display: none;">
+                <div class="chat-bubble chat-bubble--ai">
+                  <div>
+                    <span class="chat-label">AI System</span>
+                    <span class="chat-confidence">${confidenceLabel}</span>
+                  </div>
+                  <div style="margin-top:4px;">
+                    Prediction: <strong>${screen.shown_label_display}</strong>
+                  </div>
+                  ${explanationBlock}
+                </div>
+              </div>
+            </div>
+          `;
+        },
         choices: ["Continue"],
+        button_html: (choice) => `<button class="jspsych-btn hidden-next-btn" id="auto-next-btn">${choice}</button>`,
         data: {
           screen_type: "reveal",
           trial_number: screen.trial_number,
@@ -121,10 +145,9 @@ function screenToJsPsychTrial(screen, jsPsych) {
           correct_trial: screen.correct_trial,
         },
         on_load: function () {
-          // Disable the Continue button until the "typing" reveal finishes,
-          // so participants can't skip past the AI's prediction unseen.
-          const btnContainer = document.querySelector(".jspsych-btn");
-          if (btnContainer) btnContainer.disabled = true;
+          const thinkingDelay = explanationText
+            ? Math.min(700 + explanationText.length * 6, 1800)
+            : 700;
 
           setTimeout(() => {
             const thinkingEl = document.getElementById("ai-thinking");
@@ -132,43 +155,179 @@ function screenToJsPsychTrial(screen, jsPsych) {
             const explanationEl = document.getElementById("ai-explanation-text");
 
             if (thinkingEl) thinkingEl.style.display = "none";
-            if (predictionEl) predictionEl.style.visibility = "visible";
-            if (explanationEl) explanationEl.style.visibility = "visible";
-            if (btnContainer) btnContainer.disabled = false;
-          }, 1200); // 1.2s "thinking" delay before the prediction appears
+            if (predictionEl) predictionEl.style.display = "flex";
+
+            if (explanationEl && explanationText) {
+              let i = 0;
+              const typeSpeed = 16;
+              const typingInterval = setInterval(() => {
+                explanationEl.textContent = explanationText.slice(0, i + 1);
+                i++;
+                if (i >= explanationText.length) {
+                  clearInterval(typingInterval);
+                  explanationEl.classList.remove("typing-cursor");
+                  setTimeout(() => {
+                    const btn = document.getElementById("auto-next-btn");
+                    if (btn) btn.click();
+                  }, 800);
+                }
+              }, typeSpeed);
+            } else {
+              setTimeout(() => {
+                const btn = document.getElementById("auto-next-btn");
+                if (btn) btn.click();
+              }, 1000);
+            }
+          }, thinkingDelay);
         },
       };
     }
 
-    case "judgment2":
-      return {
+    case "judgment2": {
+      const metaTrialContent = {
         type: jsPsychHtmlButtonResponse,
-        // stimulus is a FUNCTION here (jsPsych evaluates it at trial
-        // run-time), because we need to look up the participant's own
-        // Initial Judgment for this same trial_number -- that answer
-        // does not exist yet when the timeline is built, only once the
-        // judgment1 trial has actually run.
         stimulus: function () {
+          const priorResponses = jsPsych.data
+            .get()
+            .filter({ screen_type: "judgment1", trial_number: screen.trial_number })
+            .values();
+          const initialJudgmentRaw =
+            priorResponses.length > 0 ? priorResponses[priorResponses.length - 1].initial_judgment : null;
+          const initialJudgmentDisplay = DISPLAY_LABELS[initialJudgmentRaw] || initialJudgmentRaw || "";
+          const confidenceLabel = getConfidenceLabel(screen.confidence);
+
+          const explanationMarkup = screen.explanation_text
+            ? `<div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(0,0,0,0.06); color:var(--ink-soft); font-size:0.9rem;">${screen.explanation_text}</div>`
+            : "";
+
+          return `
+            <div class="task-badge-wrapper">
+              <span class="task-label">${capitalize(screen.subjectivity)} Task</span>
+            </div>
+            <div class="chat-thread">
+              <div class="chat-message chat-message--user">
+                <div class="chat-bubble chat-bubble--user">
+                  <span class="chat-quote">"${screen.text}"</span>
+                  My judgment: <strong>${initialJudgmentDisplay}</strong>
+                </div>
+              </div>
+              <div class="chat-message chat-message--ai">
+                <div class="chat-bubble chat-bubble--ai">
+                  <div>
+                    <span class="chat-label">AI System</span>
+                    <span class="chat-confidence">${confidenceLabel}</span>
+                  </div>
+                  <div style="margin-top:4px;">
+                    Prediction: <strong>${screen.shown_label_display}</strong>
+                  </div>
+                  ${explanationMarkup}
+                  <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-subtle); font-size: 0.85rem; color: var(--ink-soft);">
+                    The AI agrees with your judgment. Select an option to proceed:
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        },
+        choices: ["Keep my answer", "Change my answer"],
+        data: {
+          screen_type: "judgment2_meta",
+          trial_number: screen.trial_number,
+          subjectivity: screen.subjectivity,
+          explanation_condition: screen.explanation_condition,
+        },
+        on_finish: function (data) {
+          if (data.response === 0) {
+            const priorResponses = jsPsych.data
+              .get()
+              .filter({ screen_type: "judgment1", trial_number: screen.trial_number })
+              .values();
+            const initialJudgment =
+              priorResponses.length > 0 ? priorResponses[priorResponses.length - 1].initial_judgment : null;
+
+            data.final_decision = initialJudgment;
+            data.true_label = screen.true_label;
+            data.shown_label = screen.shown_label;
+            data.correct_trial = screen.correct_trial;
+            if (!data.correct_trial) {
+              data.over_relied = data.final_decision === data.shown_label;
+            }
+            data.screen_type = "judgment2";
+          }
+        },
+      };
+
+      const metaTrial = {
+        timeline: [metaTrialContent],
+        conditional_function: function () {
           const priorResponses = jsPsych.data
             .get()
             .filter({ screen_type: "judgment1", trial_number: screen.trial_number })
             .values();
           const initialJudgment =
             priorResponses.length > 0 ? priorResponses[priorResponses.length - 1].initial_judgment : null;
-          const agreesWithAi = initialJudgment !== null && initialJudgment === screen.shown_label;
-
-          // Framing changes only; a Final Decision response is still
-          // required either way -- this does not skip or shortcut data
-          // collection, it only adjusts the wording of the prompt.
-          const promptText = agreesWithAi
-            ? "You gave the same answer as the AI. Do you want to keep your answer?"
-            : "What is your final judgment?";
-
-          return `<div class="task-label">${capitalize(screen.subjectivity)}</div>
-                  <div class="stimulus-text">"${screen.text}"</div>
-                  <p class="prompt-text">${promptText}</p>`;
+          return initialJudgment !== null && initialJudgment === screen.shown_label;
         },
-        choices: screen.options.map((o) => o.display),
+      };
+
+      const labelChoiceTrialContent = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: function () {
+          const priorResponses = jsPsych.data
+            .get()
+            .filter({ screen_type: "judgment1", trial_number: screen.trial_number })
+            .values();
+          const initialJudgmentRaw =
+            priorResponses.length > 0 ? priorResponses[priorResponses.length - 1].initial_judgment : null;
+          const initialJudgmentDisplay = DISPLAY_LABELS[initialJudgmentRaw] || initialJudgmentRaw || "";
+          const confidenceLabel = getConfidenceLabel(screen.confidence);
+
+          const explanationMarkup = screen.explanation_text
+            ? `<div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(0,0,0,0.06); color:var(--ink-soft); font-size:0.9rem;">${screen.explanation_text}</div>`
+            : "";
+
+          return `
+            <div class="task-badge-wrapper">
+              <span class="task-label">${capitalize(screen.subjectivity)} Task</span>
+            </div>
+            <div class="chat-thread">
+              <div class="chat-message chat-message--user">
+                <div class="chat-bubble chat-bubble--user">
+                  <span class="chat-quote">"${screen.text}"</span>
+                  My judgment: <strong>${initialJudgmentDisplay}</strong>
+                </div>
+              </div>
+              <div class="chat-message chat-message--ai">
+                <div class="chat-bubble chat-bubble--ai">
+                  <div>
+                    <span class="chat-label">AI System</span>
+                    <span class="chat-confidence">${confidenceLabel}</span>
+                  </div>
+                  <div style="margin-top:4px;">
+                    Prediction: <strong>${screen.shown_label_display}</strong>
+                  </div>
+                  ${explanationMarkup}
+                  <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-subtle); font-size: 0.85rem; color: var(--ink-soft);">
+                    The AI interpreted this differently than you. Would you like to keep your answer or change it?
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        },
+        choices: function () {
+          const priorResponses = jsPsych.data
+            .get()
+            .filter({ screen_type: "judgment1", trial_number: screen.trial_number })
+            .values();
+          const initialJudgmentRaw =
+            priorResponses.length > 0 ? priorResponses[priorResponses.length - 1].initial_judgment : null;
+
+          return screen.options.map((o) => {
+            const isInitial = o.value === initialJudgmentRaw;
+            return isInitial ? `Keep "${o.display}"` : `Change to "${o.display}"`;
+          });
+        },
         data: {
           screen_type: "judgment2",
           trial_number: screen.trial_number,
@@ -181,13 +340,37 @@ function screenToJsPsychTrial(screen, jsPsych) {
         },
         on_finish: function (data) {
           data.final_decision = data.option_values[data.response];
-          // over-reliance is only defined on incorrect-prediction trials:
-          // did the participant's final decision match the AI's (incorrect) shown_label?
           if (!data.correct_trial) {
             data.over_relied = data.final_decision === data.shown_label;
           }
         },
       };
+
+      const labelChoiceTrial = {
+        timeline: [labelChoiceTrialContent],
+        conditional_function: function () {
+          const priorResponses = jsPsych.data
+            .get()
+            .filter({ screen_type: "judgment1", trial_number: screen.trial_number })
+            .values();
+          const initialJudgment =
+            priorResponses.length > 0 ? priorResponses[priorResponses.length - 1].initial_judgment : null;
+          const agreesWithAi = initialJudgment !== null && initialJudgment === screen.shown_label;
+
+          if (!agreesWithAi) return true;
+
+          const metaResponses = jsPsych.data
+            .get()
+            .filter({ screen_type: "judgment2_meta", trial_number: screen.trial_number })
+            .values();
+          if (metaResponses.length === 0) return false;
+          const metaChoice = metaResponses[metaResponses.length - 1].response;
+          return metaChoice === 1;
+        },
+      };
+
+      return { timeline: [metaTrial, labelChoiceTrial] };
+    }
 
     case "attention_check":
       return {
@@ -210,6 +393,7 @@ function screenToJsPsychTrial(screen, jsPsych) {
         prompt: item.text,
         labels: screen.scale_labels,
         name: item.id,
+        required: true,
       }));
       return {
         type: jsPsychSurveyLikert,
@@ -222,20 +406,77 @@ function screenToJsPsychTrial(screen, jsPsych) {
       };
     }
 
+    case "self_confidence": {
+      const questions = screen.items.map((item) => ({
+        prompt: item.text,
+        labels: screen.scale_labels,
+        name: item.id,
+        required: true,
+      }));
+      return {
+        type: jsPsychSurveyLikert,
+        questions,
+        data: {
+          screen_type: "self_confidence",
+        },
+        // DÜZELTME: CSV kaydı artık katılımcı bu son özgüven anketini bitirdiği an tetikleniyor!
+        on_finish: function () {
+          saveExperimentData(jsPsych, participantId);
+        },
+      };
+    }
+
     case "demographics": {
       const htmlItems = screen.items.map((item) => {
         if (item.input_type === "select") {
-          const opts = item.options.map((o) => `<option value="${o}">${o}</option>`).join("");
-          return `<p>${item.label}<br><select name="${item.id}">${opts}</select></p>`;
+          const opts = item.options
+            .map((o) => `<option value="${o}">${o}</option>`)
+            .join("");
+          return `
+            <div class="form-field">
+              <label class="form-label">${item.label}</label>
+              <select class="form-select" name="${item.id}" required>
+                <option value="" disabled selected>Select an option</option>
+                ${opts}
+              </select>
+            </div>`;
         }
-        return `<p>${item.label}<br><input type="${item.input_type}" name="${item.id}" /></p>`;
+        return `
+          <div class="form-field">
+            <label class="form-label">${item.label}</label>
+            <input class="form-input" type="${item.input_type}" name="${item.id}" required />
+          </div>`;
       });
       return {
         type: jsPsychSurveyHtmlForm,
+        preamble: `
+          <div class="task-badge-wrapper">
+            <span class="task-label">Before You Begin</span>
+          </div>
+          <p class="prompt-text">A couple of quick questions before the main task.</p>
+        `,
         html: htmlItems.join(""),
+        button_label: "Continue",
         data: { screen_type: "demographics" },
       };
     }
+
+    case "closing":
+      return {
+        type: jsPsychInstructions,
+        pages: [
+          `
+          <div class="closing-screen" style="text-align: center; padding: 20px 0;">
+            <div class="closing-icon" style="font-size: 3rem; color: var(--human); margin-bottom: 16px;">&#10003;</div>
+            <h2 style="font-size: 1.5rem; color: var(--ink); margin-bottom: 12px;">You're all done!</h2>
+            <p style="color: var(--ink-soft); font-size: 1rem; max-width: 480px; margin: 0 auto;">${screen.text}</p>
+            <p style="margin-top: 24px; font-size: 0.85rem; color: var(--ink-muted);">You can now safely close this window.</p>
+          </div>
+          `
+        ],
+        show_clickable_nav: false, 
+        data: { screen_type: "closing" },
+      };
 
     default:
       throw new Error(`Unknown screen type: ${screen.type}`);
@@ -245,8 +486,8 @@ function screenToJsPsychTrial(screen, jsPsych) {
 function runExperiment() {
   const participantId = generateParticipantId();
 
-  const stimuliRows = window.STIMULI_ROWS; // from stimuli_data.js
-  const nleRows = window.NLE_ROWS; // from stimuli_data.js
+  const stimuliRows = window.STIMULI_ROWS;
+  const nleRows = window.NLE_ROWS;
 
   const { mergeStimuliAndNle, buildTrialSequence } = window.TrialBuilder;
   const { buildTimelineSpec } = window.TimelineSpec;
@@ -259,11 +500,13 @@ function runExperiment() {
     show_progress_bar: true,
     auto_update_progress_bar: true,
     on_finish: function () {
-      jsPsych.data.get().localSave("csv", `data_${participantId}.csv`);
+      saveExperimentData(jsPsych, participantId);
     },
   });
 
-  const timeline = spec.map((screen) => screenToJsPsychTrial(screen, jsPsych));
+  window.jsPsychInstance = jsPsych;
+
+  const timeline = spec.map((screen) => screenToJsPsychTrial(screen, jsPsych, participantId));
 
   jsPsych.data.addProperties({ participant_id: participantId });
   jsPsych.run(timeline);

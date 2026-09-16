@@ -1,19 +1,13 @@
 /**
- * trial_builder.js
+ * trial_builder.js - Revised Design (Fully Counterbalanced Explanation Order, Fixed 10-Item Splitting, 30 Total Trials)
  *
- * Two responsibilities:
- *   1. mergeStimuliAndNle(stimuliRows, nleRows) -- joins the two CSVs
- *      (selected_stimuli.csv and nle_explanations.csv) on task+text,
- *      producing one array of stimulus objects that each carry their
- *      own standard_nle and cognitive_forcing_nle text.
- *   2. buildTrialSequence(mergedStimuli, participantId) -- expands
- *      those stimuli into the full 90-trial sequence for one
- *      participant: for each of the 3 subjectivity blocks (fixed
- *      order) x 3 explanation conditions (counterbalanced order), the
- *      10 stimuli for that task are shown under that explanation
- *      condition.
- *
- * Depends on counterbalancing.js for order assignment.
+ * Changes:
+ *   - All 3 explanation conditions (Control, Standard NLE, Cognitive
+ *     Forcing NLE) are fully counterbalanced across participants (all
+ *     6 possible orderings used), removing any fixed-position order
+ *     confound.
+ *   - Exactly 30 items are split evenly into 3 Sets (A, B, C) of 10 items each.
+ *   - Participant sees each item exactly ONCE (no repetition / no memorization).
  */
 
 (function (root, factory) {
@@ -25,18 +19,6 @@
   }
 })(typeof window !== "undefined" ? window : global, function () {
 
-const Counterbalancing = typeof require === "function" ? require("./counterbalancing.js") : window.Counterbalancing;
-const { getExplanationOrder, getSubjectivityOrder } = Counterbalancing;
-
-/**
- * Joins stimuli rows with their NLE text. Both arrays are expected to
- * have "task" and "text" fields; nleRows additionally has
- * "standard_nle" and "cognitive_forcing_nle".
- */
-/**
- * A simple, deterministic string hash (djb2 algorithm) used to seed
- * the shuffle below.
- */
 function hashSeed(str) {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -45,12 +27,6 @@ function hashSeed(str) {
   return Math.abs(hash);
 }
 
-/**
- * A small, seeded pseudo-random number generator (mulberry32), so that
- * shuffle order is reproducible for a given seed string rather than
- * using Math.random() (which would reshuffle differently on every
- * page reload for the same participant).
- */
 function seededRandom(seedString) {
   let a = hashSeed(seedString);
   return function () {
@@ -62,11 +38,6 @@ function seededRandom(seedString) {
   };
 }
 
-/**
- * Returns a NEW array containing the same items in a deterministically
- * shuffled order, seeded by seedString (Fisher-Yates shuffle). The
- * input array is not mutated.
- */
 function shuffleDeterministic(array, seedString) {
   const rng = seededRandom(seedString);
   const result = [...array];
@@ -100,17 +71,13 @@ function mergeStimuliAndNle(stimuliRows, nleRows) {
       true_label: stim.true_label,
       shown_label: stim.shown_label,
       correct_trial: stim.correct_trial === "True" || stim.correct_trial === true,
-      confidence: parseFloat(stim.confidence), // model's genuine softmax probability for shown_label
+      confidence: parseFloat(stim.confidence),
       standard_nle: nle.standard_nle,
       cognitive_forcing_nle: nle.cognitive_forcing_nle,
     };
   });
 }
 
-/**
- * Returns the explanation text to display for a given stimulus and
- * explanation condition. Control shows no explanation text at all.
- */
 function getExplanationText(stimulus, explanationCondition) {
   if (explanationCondition === "control") return null;
   if (explanationCondition === "standard_nle") return stimulus.standard_nle;
@@ -119,57 +86,120 @@ function getExplanationText(stimulus, explanationCondition) {
 }
 
 /**
- * Builds the full ordered trial sequence for one participant.
- *
- * mergedStimuli: array of stimulus objects (from mergeStimuliAndNle),
- *   expected to contain exactly 10 stimuli per task (5 correct-trial,
- *   5 incorrect-trial), for tasks "sentiment", "irony", "sarcasm".
- * participantId: any string/number identifying this participant.
- *
- * Returns an array of 90 trial objects, each with:
- *   trial_number, subjectivity, explanation_condition, text,
- *   true_label, shown_label, correct_trial, explanation_text
+ * Returns one of the 6 possible orderings of the 3 explanation
+ * conditions, deterministically chosen from the participant's seed so
+ * that all 6 permutations are used roughly equally often across the
+ * full sample -- Control is no longer fixed to any position, removing
+ * the order confound between explanation content and trial position.
  */
-function buildTrialSequence(mergedStimuli, participantId) {
-  const subjectivityOrder = getSubjectivityOrder(); // fixed: sentiment, irony, sarcasm
-  const explanationOrder = getExplanationOrder(participantId); // counterbalanced per participant
+function getExplanationOrder(participantId) {
+  const ALL_ORDERS = [
+    ["control", "standard_nle", "cognitive_forcing_nle"],
+    ["control", "cognitive_forcing_nle", "standard_nle"],
+    ["standard_nle", "control", "cognitive_forcing_nle"],
+    ["standard_nle", "cognitive_forcing_nle", "control"],
+    ["cognitive_forcing_nle", "control", "standard_nle"],
+    ["cognitive_forcing_nle", "standard_nle", "control"],
+  ];
+  const seedNum = hashSeed(String(participantId));
+  return ALL_ORDERS[seedNum % 6];
+}
 
-  const stimuliByTask = {};
-  for (const stim of mergedStimuli) {
-    if (!stimuliByTask[stim.task]) stimuliByTask[stim.task] = [];
-    stimuliByTask[stim.task].push(stim);
-  }
+/**
+ * Assigns items into 3 Sets (A, B, C) ensuring EXACTLY 10 items per set.
+ * Balanced task distribution: Each set gets 10 items total.
+ */
+/**
+ * Assigns items into 3 Sets (A, B, C) ensuring EXACTLY 10 items per
+ * set, AND ensuring each set gets a balanced mix of correct-trial and
+ * incorrect-trial items (not just a positional slice of the raw list,
+ * which could accidentally group all-correct or all-incorrect items
+ * into the same set -- since over_relied is only computed for
+ * incorrect_trial items, an unbalanced set would make over-reliance
+ * unmeasurable in whichever explanation condition receives it).
+ */
+function assignItemSets(mergedStimuli) {
+  const byTask = { sentiment: [], irony: [], sarcasm: [] };
+  mergedStimuli.forEach((stim) => {
+    if (byTask[stim.task]) byTask[stim.task].push(stim);
+  });
 
-  for (const task of subjectivityOrder) {
-    const count = (stimuliByTask[task] || []).length;
-    if (count !== 10) {
-      throw new Error(`Expected exactly 10 stimuli for task "${task}", found ${count}.`);
+  const setA = [], setB = [], setC = [];
+  const targets = [setA, setB, setC];
+
+  // For each task, [countA, countB, countC] (must sum to 10) and the
+  // matching [correctA, correctB, correctC] sub-split (must sum to 5,
+  // the number of correct-trial items per task), chosen so every
+  // set's share is as close to a 50/50 correct/incorrect mix as the
+  // integer counts allow.
+  const TASK_SPLITS = {
+    sentiment: { counts: [3, 3, 4], correctCounts: [2, 1, 2] }, // incorrect: [1,2,2]
+    irony: { counts: [3, 4, 3], correctCounts: [2, 2, 1] }, // incorrect: [1,2,2]
+    sarcasm: { counts: [4, 3, 3], correctCounts: [1, 2, 2] }, // incorrect: [3,1,1]
+  };
+
+  for (const task of ["sentiment", "irony", "sarcasm"]) {
+    const items = byTask[task];
+    const correctItems = items.filter((i) => i.correct_trial === true);
+    const incorrectItems = items.filter((i) => i.correct_trial !== true);
+
+    if (correctItems.length !== 5 || incorrectItems.length !== 5) {
+      throw new Error(
+        `Expected exactly 5 correct + 5 incorrect items for task "${task}", ` +
+        `got ${correctItems.length} correct + ${incorrectItems.length} incorrect.`
+      );
+    }
+
+    const { counts, correctCounts } = TASK_SPLITS[task];
+    let correctIdx = 0;
+    let incorrectIdx = 0;
+
+    for (let i = 0; i < 3; i++) {
+      const takeCorrect = correctCounts[i];
+      const takeIncorrect = counts[i] - takeCorrect;
+
+      targets[i].push(...correctItems.slice(correctIdx, correctIdx + takeCorrect));
+      correctIdx += takeCorrect;
+      targets[i].push(...incorrectItems.slice(incorrectIdx, incorrectIdx + takeIncorrect));
+      incorrectIdx += takeIncorrect;
     }
   }
+
+  return { A: setA, B: setB, C: setC };
+}
+
+function getItemSetOrder(participantId) {
+  const seedNum = hashSeed(String(participantId));
+  const group = seedNum % 3;
+  if (group === 0) return ["A", "B", "C"];
+  if (group === 1) return ["B", "C", "A"];
+  return ["C", "A", "B"];
+}
+
+function buildTrialSequence(mergedStimuli, participantId) {
+  const subjectivityOrder = ["sentiment", "irony", "sarcasm"];
+  const explanationOrder = getExplanationOrder(participantId);
+  const itemSetOrder = getItemSetOrder(participantId);
+  const sets = assignItemSets(mergedStimuli);
 
   const trials = [];
   let trialNumber = 1;
 
-  // Explanation condition is the outer loop here so that, within each
-  // explanation block, all three subjectivity levels appear in their
-  // fixed order -- i.e., the participant sees one full pass through
-  // sentiment/irony/sarcasm under Explanation A, then again under
-  // Explanation B, then again under Explanation C.
-  for (const explanationCondition of explanationOrder) {
+  for (let b = 0; b < 3; b++) {
+    const explanationCondition = explanationOrder[b];
+    const currentSetKey = itemSetOrder[b];
+    const currentSetItems = sets[currentSetKey];
+
+    const itemsByTask = { sentiment: [], irony: [], sarcasm: [] };
+    currentSetItems.forEach((item) => itemsByTask[item.task].push(item));
+
     for (const task of subjectivityOrder) {
-      // Shuffle the 10 stimuli WITHIN this (explanationCondition, task)
-      // cell only. This does not change the pre-registered structure --
-      // the 9-cell block order (task and explanation sequencing) is
-      // unchanged and still governed by counterbalancing -- it only
-      // makes the item order within each 10-item cell less predictable,
-      // seeded deterministically so the same participant always gets
-      // the same item order on reload.
-      const taskStimuli = shuffleDeterministic(
-        stimuliByTask[task],
+      const taskItems = shuffleDeterministic(
+        itemsByTask[task],
         String(participantId) + "|" + explanationCondition + "|" + task
       );
 
-      for (const stim of taskStimuli) {
+      for (const stim of taskItems) {
         trials.push({
           trial_number: trialNumber++,
           subjectivity: task,
