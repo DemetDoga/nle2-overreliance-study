@@ -27,11 +27,33 @@ function getConfidenceLabel(confidence) {
 
 let dataSaved = false;
 
+// Replace with your own Google Apps Script Web App URL (ends in /exec).
+const DATA_COLLECTION_WEBHOOK_URL =
+  "https://script.google.com/macros/s/AKfycbx509RWnO_lrkS4PKvVHccgP9zqbpriLHnF_FXYQiEg0MXmG90uYh2DQyO5U0iQivKxSA/exec";
+
 function saveExperimentData(jsPsych, participantId) {
-  if (!dataSaved) {
-    dataSaved = true;
-    jsPsych.data.get().localSave("csv", `data_${participantId}.csv`);
-  }
+  if (dataSaved) return;
+  dataSaved = true;
+
+  const rows = jsPsych.data.get().values();
+
+  // Content-Type "text/plain" keeps this a CORS "simple request" (no
+  // preflight OPTIONS call, which Apps Script web apps don't handle),
+  // while still letting us read the real response instead of an
+  // opaque no-cors one.
+  fetch(DATA_COLLECTION_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(rows),
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error(`Webhook responded with status ${response.status}`);
+      console.log("Data submitted to central data collection.");
+    })
+    .catch((err) => {
+      console.error("Central data submission failed, falling back to local CSV download:", err);
+      jsPsych.data.get().localSave("csv", `data_${participantId}.csv`);
+    });
 }
 
 function screenToJsPsychTrial(screen, jsPsych, participantId) {
